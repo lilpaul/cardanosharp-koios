@@ -1,8 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using System.Text.Json;
-using CardanoSharp.Koios.Sdk;
-using CardanoSharp.Koios.Sdk.Extensions;
+using CardanoSharp.Koios.Client;
 using Refit;
 
 var networkClient = RestService.For<INetworkClient>("https://api.koios.rest/api/v0");
@@ -15,11 +14,10 @@ var assetClient = RestService.For<IAssetClient>("https://api.koios.rest/api/v0")
 var poolClient = RestService.For<IPoolClient>("https://api.koios.rest/api/v0");
 var scriptClient = RestService.For<IScriptClient>("https://api.koios.rest/api/v0");
 
-
 // Query Chain Tip
 Console.WriteLine("Query Chain Tip");
 var chainTip = networkClient.GetChainTip().Result;
-string latestEpoch = "294";
+string latestEpoch = "369";
 foreach (var ct in chainTip.Content)
 {
     latestEpoch = ct.Epoch.ToString();
@@ -63,6 +61,15 @@ foreach (var pp in protocolParameters.Content)
 }
 Console.WriteLine();
 
+// Get Epoch Information
+Console.WriteLine("Get Block Protocol");
+var blockProtocol = epochClient.GetEpochsBlockProtocols(latestEpoch).Result;
+foreach (var eb in blockProtocol.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(eb));
+}
+Console.WriteLine();
+
 // Get Block List
 Console.WriteLine("Get Block List");
 var blockList = blockClient.GetBlockList().Result;
@@ -74,8 +81,8 @@ Console.WriteLine();
 
 // Get Block Information
 Console.WriteLine("Get Block Information");
-var blockHashes = new string[] {"f6192a1aaa6d3d05b4703891a6b66cd757801c61ace86cbe5ab0d66e07f601ab"};
-var getBlockInfoRequest = new GetBlockInformationRequest() {BlockHashes = blockHashes};
+var blockHashes = new string[] { "f6192a1aaa6d3d05b4703891a6b66cd757801c61ace86cbe5ab0d66e07f601ab" };
+var getBlockInfoRequest = new BlockBulkRequest() { BlockHashes = blockHashes };
 var blockInfo = blockClient.GetBlockInfo(getBlockInfoRequest).Result;
 foreach (var bi in blockInfo.Content)
 {
@@ -85,15 +92,15 @@ Console.WriteLine();
 
 // Get Block Transactions
 Console.WriteLine("Get Block Transactions");
-var blockHash = "f6192a1aaa6d3d05b4703891a6b66cd757801c61ace86cbe5ab0d66e07f601ab";
-var blockTransactions = blockClient.GetBlockTransactions(blockHash).Result;
+var blockTransactions = blockClient.GetBlockTransactions(new BlockBulkRequest { BlockHashes = blockHashes }).Result;
 foreach (var bt in blockTransactions.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(bt));
 }
 Console.WriteLine();
 
-
+// Get Transaction Information
+Console.WriteLine("Get Transaction Information");
 var transactionRequest = new GetTransactionRequest
 {
     TxHashes = new List<string>()
@@ -101,9 +108,6 @@ var transactionRequest = new GetTransactionRequest
         "1be5e0c09cb4ff238e00717fcce4f01acc286f7b4595d44334c8b911b6ce600b"
     }
 };
-
-// Get Transaction Information
-Console.WriteLine("Get Transaction Information");
 var transactionInformation = transactionClient.GetTransactionInformation(transactionRequest).Result;
 foreach (var ti in transactionInformation.Content)
 {
@@ -129,15 +133,14 @@ foreach (var tm in transactionMetadata.Content)
 }
 Console.WriteLine();
 
-// Get Transaction Metadata
-// throwing 404
-// Console.WriteLine("Get Transaction Status");
-// var transactionStatus = transactionClient.GetTransactionStatus(transactionRequest).Result;
-// foreach (var ts in transactionStatus)
-// {
-//     Console.WriteLine(JsonSerializer.Serialize(ts));
-// }
-// Console.WriteLine();
+//Get Transaction Metadata
+Console.WriteLine("Get Transaction Status");
+var transactionStatus = transactionClient.GetTransactionStatus(transactionRequest).Result;
+foreach (var ts in transactionStatus.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(ts));
+}
+Console.WriteLine();
 
 //Submit Transaction Example
 //this produced this https://testnet.cardanoscan.io/transaction/3e30d5012bdea1ffa667f0dbbac647ef5b74acb0c747af89657cc9456ad39df7
@@ -157,13 +160,16 @@ Console.WriteLine();
 // Get Address Information
 Console.WriteLine("Get Address Information");
 var address = "addr1qyp9kz50sh9c53hpmk3l4ewj9ur794t2hdqpngsjn3wkc5sztv9glpwt3frwrhdrltjaytc8ut2k4w6qrx3p98zad3fq07xe9g";
-var addressInformation = addressClient.GetAddressInformation(address).Result;
+var addressBulkRequest = new AddressBulkRequest { Addresses = new List<string> { address } };
+var addressInformation = addressClient.GetAddressInformation(addressBulkRequest).Result;
 foreach (var ai in addressInformation.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(ai));
 }
 Console.WriteLine();
 
+// Get Address Transactions
+Console.WriteLine("Get Address Transactions");
 var addressTransactionRequest = new AddressTransactionRequest()
 {
     Addresses = new List<string>()
@@ -173,9 +179,6 @@ var addressTransactionRequest = new AddressTransactionRequest()
     },
     AfterBlockHeight = 6238675
 };
-
-// Get Address Transactions
-Console.WriteLine("Get Address Transactions");
 var addressTransactions = addressClient.GetAddressTransactions(addressTransactionRequest).Result;
 foreach (var at in addressTransactions.Content)
 {
@@ -185,15 +188,15 @@ Console.WriteLine();
 
 // Get Address Assets
 Console.WriteLine("Get Address Assets");
-var addressForAssets =
-    "addr1q8h22z0n3zqecr9n4q9ysds2m2ms3dqesz575accjpc3jclw55yl8zypnsxt82q2fqmq4k4hpz6pnq9fafm33yr3r93sgnpdw6";
-var addressAssets = addressClient.GetAddressAssets(addressForAssets).Result;
+var addressAssets = addressClient.GetAddressAssets(addressBulkRequest).Result;
 foreach (var aa in addressAssets.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(aa));
 }
 Console.WriteLine();
 
+// Get Transactions from Payment Credentials
+Console.WriteLine("Get Transactions from payment credentials");
 var credentialTransactionRequest = new CredentialTransactionRequest()
 {
     PaymentCredentials = new List<string>()
@@ -203,9 +206,6 @@ var credentialTransactionRequest = new CredentialTransactionRequest()
     },
     AfterBlockHeight = 6238675
 };
-
-// Get Transactions from Payment Credentials
-Console.WriteLine("Get Transactions from payment credentials");
 var credentialTransactions = addressClient
     .GetCredentialTransactions(credentialTransactionRequest).Result;
 foreach (var ct in credentialTransactions.Content)
@@ -216,7 +216,7 @@ Console.WriteLine();
 
 // Get All Stake Accounts
 Console.WriteLine("Get All Stake Accounts");
-var stakeAccounts = accountClient.GetAllStakeAccounts().Result;
+var stakeAccounts = accountClient.GetAllAccounts().Result;
 foreach (var sa in stakeAccounts.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(sa));
@@ -224,9 +224,10 @@ foreach (var sa in stakeAccounts.Content)
 Console.WriteLine();
 
 // Get Stake Information
-Console.WriteLine("Get Stake Information");
-var stakeAddress = "stake1u8yxtugdv63wxafy9d00nuz6hjyyp4qnggvc9a3vxh8yl0ckml2uz";
-var stakeInformation = accountClient.GetStakeInformation(stakeAddress).Result;
+Console.WriteLine("Get Account Information");
+var stakeAddressesToRequest = new[] { "stake1u8yxtugdv63wxafy9d00nuz6hjyyp4qnggvc9a3vxh8yl0ckml2uz" };
+var accountBulkRequest = new AccountBulkRequest { StakeAddresses = stakeAddressesToRequest };
+var stakeInformation = accountClient.GetAccountInformation(accountBulkRequest).Result;
 foreach (var si in stakeInformation.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(si));
@@ -234,8 +235,9 @@ foreach (var si in stakeInformation.Content)
 Console.WriteLine();
 
 // Get Stake Rewards
-Console.WriteLine("Get Stake Rewards");
-var stakeRewards = accountClient.GetStakeRewards(stakeAddress).Result;
+Console.WriteLine("Get Account Rewards");
+var accountHistoryRequest = new AccountHistoricalBulkRequest { StakeAddresses = stakeAddressesToRequest, EpochNo = 280 };
+var stakeRewards = accountClient.GetAccountRewards(accountHistoryRequest).Result;
 foreach (var sr in stakeRewards.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(sr));
@@ -243,8 +245,8 @@ foreach (var sr in stakeRewards.Content)
 Console.WriteLine();
 
 // Get Stake Updates
-Console.WriteLine("Get Stake Updates");
-var stakeUpdates = accountClient.GetStakeUpdates(stakeAddress).Result;
+Console.WriteLine("Get Account Updates");
+var stakeUpdates = accountClient.GetAccountUpdates(accountBulkRequest).Result;
 foreach (var su in stakeUpdates.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(su));
@@ -252,8 +254,8 @@ foreach (var su in stakeUpdates.Content)
 Console.WriteLine();
 
 // Get Stake Addresses
-Console.WriteLine("Get Stake Addresses");
-var stakeAddresses = accountClient.GetStakeAddresses(stakeAddress).Result;
+Console.WriteLine("Get Account Stake Addresses");
+var stakeAddresses = accountClient.GetAccountAddresses(accountBulkRequest).Result;
 foreach (var sa in stakeAddresses.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(sa));
@@ -261,8 +263,8 @@ foreach (var sa in stakeAddresses.Content)
 Console.WriteLine();
 
 // Get Stake Assets
-Console.WriteLine("Get Stake Assets");
-var stakeAssets = accountClient.GetStakeAssets(stakeAddress).Result;
+Console.WriteLine("Get Account Assets");
+var stakeAssets = accountClient.GetAccountAssets(accountBulkRequest).Result;
 foreach (var sa in stakeAssets.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(sa));
@@ -270,8 +272,8 @@ foreach (var sa in stakeAssets.Content)
 Console.WriteLine();
 
 // Get Stake History
-Console.WriteLine("Get Stake History");
-var stakeHistory = accountClient.GetStakeHistory(stakeAddress).Result;
+Console.WriteLine("Get Account History");
+var stakeHistory = accountClient.GetAccountHistory(accountHistoryRequest).Result;
 foreach (var sh in stakeHistory.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(sh));
@@ -279,7 +281,7 @@ foreach (var sh in stakeHistory.Content)
 Console.WriteLine();
 
 // Get Assets
-Console.WriteLine("Get Assets ");
+Console.WriteLine("Get Assets");
 var assets = assetClient.GetAssetsList().Result;
 foreach (var ai in assets.Content)
 {
@@ -304,6 +306,33 @@ var assetInformations = assetClient.GetInfo(policyId, assetName).Result;
 foreach (var ai in assetInformations.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(ai));
+}
+Console.WriteLine();
+
+// Get Asset History
+Console.WriteLine("Get Asset History");
+var assetHistory = assetClient.GetHistory(policyId, assetName).Result;
+foreach (var history in assetHistory.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(history));
+}
+Console.WriteLine();
+
+// Get Asset Policy Information
+Console.WriteLine("Get Asset Policy Info");
+var assetPolicyInfo = assetClient.GetPolicyInfo(policyId).Result;
+foreach (var policyInfo in assetHistory.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(policyInfo));
+}
+Console.WriteLine();
+
+// Get Asset Summary
+Console.WriteLine("Get Asset Summary");
+var assetSummary = assetClient.GetSummary(policyId, assetName).Result;
+foreach (var summary in assetSummary.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(summary));
 }
 Console.WriteLine();
 
@@ -343,12 +372,30 @@ foreach (var pi in poolInformations.Content)
 }
 Console.WriteLine();
 
+// Get Pool Stake Snapshot
+Console.WriteLine("Get Pool Stake Snapshot");
+var poolBech32 = "pool155efqn9xpcf73pphkk88cmlkdwx4ulkg606tne970qswczg3asc";
+var poolSnapshot = poolClient.GetStakeSnapshot(poolBech32).Result;
+foreach (var pi in poolSnapshot.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(pi));
+}
+Console.WriteLine();
+
 // Get Pool Delegators
 Console.WriteLine("Get Pool Delegators");
-var poolBech32 = "pool155efqn9xpcf73pphkk88cmlkdwx4ulkg606tne970qswczg3asc";
 var epochNo = "294"; //optional
-var poolDelegators = poolClient.GetDelegators(poolBech32, epochNo).Result;
+var poolDelegators = poolClient.GetDelegators(poolBech32).Result;
 foreach (var pd in poolDelegators.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(pd));
+}
+Console.WriteLine();
+
+// Get Pool Delegators History
+Console.WriteLine("Get Pool Delegators History");
+var poolDelegatorsHistory = poolClient.GetDelegatorsHistory(poolBech32, epochNo).Result;
+foreach (var pd in poolDelegatorsHistory.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(pd));
 }
@@ -360,6 +407,15 @@ var poolBlocks = poolClient.GetBlocks(poolBech32, epochNo).Result;
 foreach (var pb in poolBlocks.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(pb));
+}
+Console.WriteLine();
+
+// Get Pool History
+Console.WriteLine("Get Pool History");
+var poolHistory = poolClient.GetHistory(poolBech32, epochNo).Result;
+foreach (var pd in poolHistory.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(pd));
 }
 Console.WriteLine();
 
@@ -415,5 +471,15 @@ var scriptRedeemers = scriptClient.GetRedeemers(scriptHash).Result;
 foreach (var sr in scriptRedeemers.Content)
 {
     Console.WriteLine(JsonSerializer.Serialize(sr));
+}
+Console.WriteLine();
+
+// Get Datum Information
+Console.WriteLine("Get Datum Information");
+var datumHashes = new[]{"818ee3db3bbbd04f9f2ce21778cac3ac605802a4fcb00c8b3a58ee2dafc17d46", "45b0cfc220ceec5b7c1c62c4d4193d38e4eba48e8815729ce75f9c0ab0e4c1c0"};
+var datumInfo = scriptClient.GetDatumInformation(new GetDatumInformationRequest { DatumHashes = datumHashes}).Result;
+foreach (var di in datumInfo.Content)
+{
+    Console.WriteLine(JsonSerializer.Serialize(di));
 }
 Console.WriteLine();
